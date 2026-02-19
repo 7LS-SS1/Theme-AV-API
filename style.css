@@ -4,7 +4,7 @@ Theme URI: https://example.com/theme-av-api
 Author: 7LS
 Author URI: https://7ls.com
 Description: ธีมวิดีโอโทนดำ-แดง สำหรับ CPT และ taxonomy ของ 7LS-Video-Publisher.
-Version: 1.3.0
+Version: 1.3.2
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
@@ -2737,6 +2737,20 @@ body.admin-bar .site-header {
 .streamit-row .video-card {
   border-radius: 10px;
   height: 100%;
+}
+
+/* AV row: show as grid, no horizontal scroll */
+#av-movies .streamit-row__track {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-auto-flow: row;
+  grid-auto-columns: unset;
+  overflow: visible;
+  scroll-snap-type: none;
+  padding-bottom: 0;
+}
+
+#av-movies .streamit-row__item {
+  scroll-snap-align: unset;
 }
 
 /* ── Responsive: streamit ────────────────────────────────── */

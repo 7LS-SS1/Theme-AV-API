@@ -153,8 +153,8 @@ if (!$weekly_popular_query->have_posts()) {
     ]);
 }
 
-/* ── AV movies row (40 videos) ───────────────────────────── */
-$av_movies_args = [
+/* ── All categories row (40 videos) ──────────────────────── */
+$av_movies_query = new WP_Query([
     'post_type'           => 'video',
     'post_status'         => 'publish',
     'posts_per_page'      => 40,
@@ -162,37 +162,10 @@ $av_movies_args = [
     'order'               => 'DESC',
     'ignore_sticky_posts' => true,
     'no_found_rows'       => true,
-];
-
-$av_category_term = get_term_by('slug', 'av', 'video_category');
-if (!$av_category_term || is_wp_error($av_category_term)) {
-    $av_category_term = get_term_by('name', 'AV', 'video_category');
-}
-
-if ($av_category_term && !is_wp_error($av_category_term)) {
-    $av_movies_args['tax_query'] = [
-        [
-            'taxonomy' => 'video_category',
-            'field'    => 'term_id',
-            'terms'    => (int) $av_category_term->term_id,
-        ],
-    ];
-}
-
-$av_movies_query = new WP_Query($av_movies_args);
-if (!$av_movies_query->have_posts() && !empty($av_movies_args['tax_query'])) {
-    unset($av_movies_args['tax_query']);
-    $av_movies_query = new WP_Query($av_movies_args);
-}
+]);
 
 $popular_view_all_url = add_query_arg('sort', 'popular', $archive_url);
 $av_view_all_url = $archive_url;
-if ($av_category_term && !is_wp_error($av_category_term)) {
-    $av_term_link = get_term_link($av_category_term);
-    if (!is_wp_error($av_term_link) && $av_term_link) {
-        $av_view_all_url = $av_term_link;
-    }
-}
 ?>
 
 <div class="streamit-page">
@@ -368,7 +341,7 @@ if ($av_category_term && !is_wp_error($av_category_term)) {
     <?php if ($av_movies_query->have_posts()) : ?>
     <section class="streamit-row" id="av-movies">
         <div class="streamit-row__head">
-            <h2 class="streamit-row__title"><?php esc_html_e('หนัง AV', 'publish-videos-api'); ?></h2>
+            <h2 class="streamit-row__title"><?php esc_html_e('หมวดหมู่ทั้งหมด', 'publish-videos-api'); ?></h2>
             <a class="streamit-row__view-all" href="<?php echo esc_url($av_view_all_url); ?>"><?php esc_html_e('View All', 'publish-videos-api'); ?></a>
         </div>
         <div class="streamit-row__track" role="list">
