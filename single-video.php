@@ -15,6 +15,7 @@ get_header();
         $categories = get_the_terms($post_id, 'video_category');
         $tags = get_the_terms($post_id, 'video_tag');
         $actors = get_the_terms($post_id, 'video_actor');
+        $producer_terms = [];
 
         $raw_payload_value = get_post_meta($post_id, '_sevenls_vp_raw_payload', true);
         $raw_payload_data = [];
@@ -69,6 +70,46 @@ get_header();
             return '';
         };
 
+        $producer_taxonomy_candidates = [
+            'video_producer',
+            'video_studio',
+            'video_maker',
+            'video_label',
+            'producer',
+            'studio',
+            'maker',
+            'label',
+        ];
+        $video_taxonomies = get_object_taxonomies('video', 'objects');
+        if (is_array($video_taxonomies)) {
+            foreach ($video_taxonomies as $taxonomy_slug => $taxonomy_obj) {
+                $haystack = strtolower((string) $taxonomy_slug . ' ' . (string) ($taxonomy_obj->labels->name ?? '') . ' ' . (string) ($taxonomy_obj->labels->singular_name ?? ''));
+                if (preg_match('/producer|studio|maker|label|publisher|company|ค่าย|ผู้ผลิต/u', $haystack)) {
+                    $producer_taxonomy_candidates[] = (string) $taxonomy_slug;
+                }
+            }
+        }
+        $producer_taxonomy_candidates = array_values(array_unique($producer_taxonomy_candidates));
+        $producer_term_names = [];
+        foreach ($producer_taxonomy_candidates as $producer_taxonomy) {
+            if (!taxonomy_exists($producer_taxonomy)) {
+                continue;
+            }
+            $terms = get_the_terms($post_id, $producer_taxonomy);
+            if (empty($terms) || is_wp_error($terms)) {
+                continue;
+            }
+            foreach ($terms as $term) {
+                $term_key = $term->taxonomy . ':' . (string) $term->term_id;
+                if (isset($producer_terms[$term_key])) {
+                    continue;
+                }
+                $producer_terms[$term_key] = $term;
+                $producer_term_names[] = (string) $term->name;
+            }
+        }
+        $producer_terms = array_values($producer_terms);
+
         if ($duration === '' && isset($raw_payload_data['duration'])) {
             $duration = publish_videos_api_format_duration_value($raw_payload_data['duration']);
         }
@@ -121,31 +162,37 @@ get_header();
             $date_added = get_the_date('Y-m-d', $post_id);
         }
 
-        $producer = $get_first_meta_value($post_id, [
-            '_sevenls_vp_producer',
-            '_sevenls_vp_studio',
-            '_sevenls_vp_maker',
-            '_sevenls_vp_label',
-            'producer',
-            'studio',
-            'maker',
-            'label',
-            'publisher',
-            'company',
-        ]);
+        $producer = '';
+        if (!empty($producer_term_names)) {
+            $producer = implode(', ', array_unique($producer_term_names));
+        }
+        if ($producer === '') {
+            $producer = $get_first_meta_value($post_id, [
+                '_sevenls_vp_producer',
+                '_sevenls_vp_studio',
+                '_sevenls_vp_maker',
+                '_sevenls_vp_label',
+                'producer',
+                'studio',
+                'maker',
+                'label',
+                'publisher',
+                'company',
+            ]);
+        }
         if ($producer === '') {
             $producer = $find_payload_value($raw_payload_data, ['producer', 'studio', 'maker', 'label', 'publisher', 'company']);
         }
         if ($producer === '' && !empty($categories) && !is_wp_error($categories)) {
-            $producer_terms = [];
+            $producer_from_categories = [];
             foreach ($categories as $term) {
                 $term_name = (string) $term->name;
                 if (preg_match('/factory|studio|maker|label|production|ค่าย|ผู้ผลิต/i', $term_name)) {
-                    $producer_terms[] = $term_name;
+                    $producer_from_categories[] = $term_name;
                 }
             }
-            if (!empty($producer_terms)) {
-                $producer = implode(', ', array_unique($producer_terms));
+            if (!empty($producer_from_categories)) {
+                $producer = implode(', ', array_unique($producer_from_categories));
             }
         }
 
@@ -234,6 +281,10 @@ get_header();
                         <div class="video-jav-details__row">
                             <span class="video-jav-details__label">นักแสดงหญิง :</span>
                             <span class="video-jav-details__value"><?php $render_terms_value($actors); ?></span>
+                        </div>
+                        <div class="video-jav-details__row">
+                            <span class="video-jav-details__label">หมวดหมู่ผู้ผลิต :</span>
+                            <span class="video-jav-details__value"><?php $render_terms_value($producer_terms); ?></span>
                         </div>
                         <div class="video-jav-details__row">
                             <span class="video-jav-details__label">ผู้ผลิต :</span>
