@@ -417,6 +417,105 @@
       .forEach((video) => stopPreview(video));
   });
 
+  const restoreNativeVideoControls = () => {
+    document.querySelectorAll('.video-player .sevenls-video-player').forEach((container) => {
+      const video = container.querySelector('video');
+      if (!video) {
+        return;
+      }
+
+      const preplayActive = container.classList.contains('pva-preplay-active');
+      if (!preplayActive) {
+        video.controls = true;
+        video.setAttribute('controls', 'controls');
+      }
+
+      container
+        .querySelectorAll('.sevenls-vp-controls, .sevenls-vp-play-overlay, .sevenls-vp-loading')
+        .forEach((element) => element.remove());
+    });
+  };
+
+  const initSinglePreplayButton = () => {
+    document.querySelectorAll('.video-player .sevenls-video-player').forEach((container) => {
+      const video = container.querySelector('video');
+      if (!video || container.dataset.pvaPreplayBound === 'true') {
+        return;
+      }
+
+      container.dataset.pvaPreplayBound = 'true';
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'pva-preplay-button';
+      button.setAttribute('aria-label', 'เล่นวิดีโอ');
+      button.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>';
+      container.appendChild(button);
+
+      let started = false;
+
+      const showPreplay = () => {
+        if (started) {
+          return;
+        }
+        container.classList.add('pva-preplay-active');
+        video.controls = false;
+        video.removeAttribute('controls');
+      };
+
+      const hidePreplay = () => {
+        container.classList.remove('pva-preplay-active');
+        video.controls = true;
+        video.setAttribute('controls', 'controls');
+      };
+
+      const playFromButton = () => {
+        if (started) {
+          return;
+        }
+        started = true;
+        hidePreplay();
+        const playPromise = video.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(() => {
+            started = false;
+            showPreplay();
+          });
+        }
+      };
+
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        playFromButton();
+      });
+
+      video.addEventListener('play', () => {
+        started = true;
+        hidePreplay();
+      });
+
+      showPreplay();
+    });
+  };
+
+  const syncVideoPlayerUI = () => {
+    restoreNativeVideoControls();
+    initSinglePreplayButton();
+  };
+
+  syncVideoPlayerUI();
+  window.addEventListener('load', syncVideoPlayerUI);
+
+  if ('MutationObserver' in window && document.body) {
+    const nativeControlsObserver = new MutationObserver(() => {
+      syncVideoPlayerUI();
+    });
+    nativeControlsObserver.observe(document.body, { childList: true, subtree: true });
+    window.setTimeout(() => nativeControlsObserver.disconnect(), 8000);
+  }
+
   const player = document.querySelector('.video-player');
   if (player && window.pvaSettings?.preroll?.enabled) {
     const allowed = player.getAttribute('data-preroll-enabled') === 'true';
